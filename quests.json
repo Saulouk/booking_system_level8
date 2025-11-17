@@ -1,0 +1,7 @@
+{
+  "name": "Karaoke Booking System",
+  "icon": {
+    "background": "conic-gradient(from 42deg at 50% 50%, #5e5ce6, #af53de)",
+    "lucide": "calendar"
+  }
+}
