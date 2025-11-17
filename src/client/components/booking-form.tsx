@@ -52,10 +52,11 @@ export function BookingForm() {
   }, [formData.mobile, formData.email]);
 
   useEffect(() => {
-    if (formData.startTime && formData.hours) {
+    if (formData.startTime && formData.hours && formData.numberOfPeople) {
       calculateEstimate.mutate(
         {
           hours: formData.hours,
+          numberOfPeople: formData.numberOfPeople,
           startTime: formData.startTime,
           promoCode: formData.promoCode || undefined,
         },
@@ -64,7 +65,7 @@ export function BookingForm() {
         }
       );
     }
-  }, [formData.hours, formData.startTime, formData.promoCode]);
+  }, [formData.hours, formData.numberOfPeople, formData.startTime, formData.promoCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -313,17 +314,17 @@ export function BookingForm() {
               )}
               {estimate.discount > 0 && (
                 <p className="text-green-600">
-                  Discount: -${estimate.discount.toFixed(2)}
+                  Discount: -£{estimate.discount.toFixed(2)}
                 </p>
               )}
               <p className="text-lg font-bold text-purple-900">
-                Total: ${estimate.finalPrice.toFixed(2)}
+                Total: £{estimate.finalPrice.toFixed(2)}
               </p>
               <p className="text-gray-600">
-                Deposit Required: ${estimate.depositAmount.toFixed(2)}
+                Deposit Required: £{estimate.depositAmount.toFixed(2)}
               </p>
               <p className="text-gray-600">
-                Remaining on Arrival: ${estimate.remainingAmount.toFixed(2)}
+                Remaining on Arrival: £{estimate.remainingAmount.toFixed(2)}
               </p>
             </div>
           </div>

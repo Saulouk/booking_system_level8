@@ -1,257 +1,287 @@
-# Karaoke Booking System - Setup Guide
+# Karaoke Booking System - WhatsApp Cloud API & Per-Person Pricing
 
-A comprehensive booking system for private karaoke venues with customer booking, admin approval, payment processing, automated notifications, and reminders.
+## Key Features
 
-## Features
+### New Pricing Model
+- **£20 per person** for the first 3 hours
+- **£5 per person** for each additional hour
+- Example: 4 people for 5 hours = (4 × £20) + (4 × £5 × 2) = £80 + £40 = **£120**
+- Admin can override prices for any booking
 
-### Customer Features
-- Online booking form with real-time price estimation
-- Auto-fill for returning customers
-- Promo code support
-- Peak/off-peak pricing
-- Choose communication preference (WhatsApp or Email)
-- Secure deposit payment via Stripe
-- Booking confirmation messages
-- Automated reminders (24h and 2h before booking)
-- Easy cancellation with unique link
-
-### Admin Features
-- Real-time booking dashboard
-- Calendar view showing all 10 rooms and time slots
-- Filter bookings by status, date, room, or customer
-- Approve/reject booking requests
-- Generate payment links
-- Modify booking details
-- Move bookings to different rooms
-- Customer database with booking history
-- Room management
-- Promo code management
-- Comprehensive settings panel
-
-### Automated Features
-- WhatsApp notifications to admin for new bookings
-- Payment link generation upon approval
-- Confirmation messages after deposit payment
-- 24-hour advance reminders
-- 2-hour advance reminders
-- Cancellation notifications to admin
+### WhatsApp Cloud API
+- Uses Meta's official WhatsApp Business Cloud API
+- More reliable than Twilio
+- Better message delivery rates
+- Direct integration with Facebook Business
 
 ## Setup Instructions
 
-### 1. Install Dependencies
+### 1. WhatsApp Cloud API Setup
 
-The required dependencies are already installed:
-- stripe (payment processing)
-- twilio (WhatsApp messaging)
-- nodemailer (email notifications)
-- date-fns (date manipulation)
-- node-cron (scheduled reminders)
+#### Step 1: Create Meta Business App
+1. Go to https://developers.facebook.com/apps
+2. Click "Create App"
+3. Select "Business" as app type
+4. Fill in app details and create
 
-### 2. Configure Third-Party Services
+#### Step 2: Add WhatsApp Product
+1. In your app dashboard, click "Add Product"
+2. Find "WhatsApp" and click "Set Up"
+3. This will add WhatsApp to your app
 
-#### Stripe Setup (Required for Payments)
+#### Step 3: Get Your Credentials
+1. In the WhatsApp settings, you'll see:
+   - **Temporary Access Token** (valid for 24 hours - for testing)
+   - **Phone Number ID** (a long numeric ID)
+2. Copy both of these
 
-1. Create a Stripe account at https://stripe.com
-2. Get your API keys from the Stripe dashboard
-3. In the app, navigate to **Settings** and enter:
-   - **Publishable Key**: Your Stripe publishable key (pk_test_...)
-   - **Secret Key**: Your Stripe secret key (sk_test_...)
+#### Step 4: Get Permanent Access Token
+1. Go to https://business.facebook.com/settings/whatsapp-business-accounts
+2. Select your WhatsApp Business Account
+3. Go to "System Users" → Create a system user
+4. Assign the system user to your app
+5. Generate a permanent access token with `whatsapp_business_messaging` permission
 
-#### Twilio Setup (Required for WhatsApp)
+#### Step 5: Configure in App
+1. Open your booking system
+2. Go to **Settings** tab
+3. Under "WhatsApp Cloud API":
+   - **Access Token**: Paste your permanent access token (starts with `EAAA...`)
+   - **Phone Number ID**: Paste your phone number ID (15-digit number)
 
-1. Create a Twilio account at https://twilio.com
-2. Set up WhatsApp Business API (sandbox for testing)
-3. Get your credentials from the Twilio console
-4. In the app Settings, enter:
-   - **Account SID**: Your Twilio Account SID
-   - **Auth Token**: Your Twilio Auth Token
-   - **WhatsApp From Number**: Your Twilio WhatsApp number (e.g., +14155238886)
+#### Step 6: Verify Setup
+1. Add a test phone number in Meta Business dashboard
+2. Make a test booking to see if WhatsApp message is sent
 
-#### Email Setup (Required for Email Notifications)
+### 2. Pricing Configuration
 
-You can use any SMTP provider (Gmail, SendGrid, etc.)
+The new per-person pricing is already configured with defaults:
+- Base hours: 3
+- Price per person (base): £20
+- Additional per hour: £5
+
+#### Customize Pricing
+1. Go to **Settings** → **Pricing Model**
+2. Adjust:
+   - **Base Hours**: Number of hours included in base price
+   - **Price Per Person (Base)**: Cost per person for base hours
+   - **Additional Per Hour**: Cost per person for each extra hour
+
+#### Admin Price Override
+Admins can override the automatic pricing for any booking:
+
+1. Go to **Admin** dashboard
+2. Click "Override Price" on any booking
+3. Enter custom price in GBP (£)
+4. The system will recalculate deposit and remaining balance
+
+This is useful for:
+- Special discounts
+- VIP customers
+- Group packages
+- Promotional rates
+
+### 3. Stripe Payment Setup
+
+1. Create account at https://stripe.com
+2. Get your API keys from Dashboard → Developers → API keys
+3. In app Settings → Stripe Settings:
+   - **Publishable Key**: `pk_test_...` or `pk_live_...`
+   - **Secret Key**: `sk_test_...` or `sk_live_...`
+
+### 4. Email Notifications Setup
+
+Configure SMTP for email notifications (backup to WhatsApp):
 
 **For Gmail:**
-1. Enable 2-factor authentication on your Google account
-2. Generate an App Password: https://myaccount.google.com/apppasswords
-3. In the app Settings, enter:
-   - **SMTP Host**: smtp.gmail.com
-   - **SMTP Port**: 587
-   - **SMTP Username**: your-email@gmail.com
-   - **SMTP Password**: your-app-password
-   - **From Email**: your-email@gmail.com
+```
+SMTP Host: smtp.gmail.com
+SMTP Port: 587
+Username: your-email@gmail.com
+Password: your-app-password (from Google Account settings)
+From Email: your-email@gmail.com
+```
 
-### 3. Initial Configuration
+## How Pricing Works
 
-#### Step 1: Create Rooms
+### Automatic Calculation
 
-1. Navigate to the **Rooms** tab
-2. Click "Add Room"
-3. Create your 10 karaoke rooms with:
-   - Room name (e.g., "VIP Room 1", "Standard Room A")
-   - Capacity (number of people)
-   - Hourly rate (in dollars)
+The system automatically calculates prices based on:
+1. Number of people
+2. Number of hours
+3. Peak time multiplier (if applicable)
+4. Promo code discount (if provided)
 
-#### Step 2: Configure Settings
+**Example Calculations:**
 
-1. Navigate to the **Settings** tab
-2. Fill in the required fields:
+**Basic Booking (2 people, 3 hours):**
+- 2 × £20 = **£40**
 
-**General Settings:**
-- Venue Name (e.g., "Karaoke Paradise")
-- Deposit Percentage (default: 30%)
-- Venue Address
-- Google Maps Link
+**Extended Booking (2 people, 5 hours):**
+- Base (3 hours): 2 × £20 = £40
+- Additional (2 hours): 2 × £5 × 2 = £20
+- Total: **£60**
 
-**Admin Contact:**
-- Admin WhatsApp Number (with country code, e.g., +1234567890)
-- Admin Email
+**Large Group (10 people, 4 hours):**
+- Base (3 hours): 10 × £20 = £200
+- Additional (1 hour): 10 × £5 = £50
+- Total: **£250**
 
-**Pricing:**
-- Peak Price Multiplier (e.g., 1.5 = 50% higher during peak hours)
-- Peak Hours (click hours to toggle, e.g., 18-22 for 6 PM - 10 PM)
+**Peak Time Booking (4 people, 3 hours, 1.5x multiplier):**
+- Base: 4 × £20 = £80
+- Peak multiplier: £80 × 1.5 = **£120**
 
-**API Keys:**
-- Stripe keys (from Step 2)
-- Twilio credentials (from Step 2)
-- SMTP settings (from Step 2)
+### Peak Time Pricing
 
-3. Click "Save Settings"
+1. Go to Settings → Peak Time Pricing
+2. Set **Peak Price Multiplier** (e.g., 1.5 = 50% increase)
+3. Click hours to toggle peak times (e.g., 18:00-22:00)
+4. Peak pricing applies automatically during selected hours
 
-#### Step 3: (Optional) Create Promo Codes
+### Promo Codes
 
-1. In the Settings section, scroll to Promo Codes
-2. Create promotional codes with:
-   - Code (e.g., "WELCOME10")
+1. Go to **Promos** tab
+2. Create promo codes with:
+   - Code name (e.g., "WELCOME10")
    - Discount percentage
    - Expiration date (optional)
+3. Customers enter code during booking
+4. Discount applies to final price before deposit calculation
 
-## How to Use
+## Room Management
 
-### Customer Booking Flow
+**Important:** Rooms are still managed but no longer affect pricing directly. They're used for:
+- Availability checking
+- Booking assignment
+- Calendar visualization
 
-1. Customer visits the **Book Now** page
-2. Fills in booking details:
-   - Date and start time
-   - Duration (1-12 hours)
-   - Number of people
-   - Contact information
-   - Preferred communication method
-3. System shows estimated price (including peak pricing and promo discounts)
-4. Customer submits booking request
-5. Admin receives WhatsApp notification with booking details
+To manage rooms:
+1. Go to **Rooms** tab
+2. Add/edit rooms (capacity and hourly rate fields remain for reference)
+3. The system will auto-assign available rooms to bookings
 
-### Admin Approval Flow
+## WhatsApp Message Examples
 
-1. Admin checks the **Admin** dashboard
-2. Reviews pending booking requests
-3. Clicks "Approve" to generate payment link
-4. Payment link opens in new tab (share with customer)
-5. Customer pays deposit via Stripe
-6. System automatically:
-   - Updates booking status to "Confirmed"
-   - Sends confirmation message to customer
-   - Increments customer's total visits
+### New Booking Notification (to Admin)
+```
+🎤 New Booking Request
 
-### Automated Reminders
+Customer: John Smith
+Date: 2024-02-15
+Time: 19:00
+Duration: 4 hours
+Room: VIP Room 1
+People: 6
+Mobile: +447123456789
+Email: john@example.com
 
-The system automatically sends reminders:
-- **24 hours before**: Includes date, time, room, and balance due
-- **2 hours before**: Includes time, room, and location details
+Status: PENDING
+```
 
-Reminders are sent via the customer's preferred communication method.
+### Confirmation (to Customer)
+```
+✅ Booking Confirmed!
 
-### Cancellation Flow
+Karaoke Paradise
+John Smith, your booking is confirmed!
 
-1. Customer clicks cancellation link from confirmation message
-2. Confirms cancellation
-3. Admin receives notification
-4. Booking status updates to "Cancelled"
-5. Room becomes available again
+📅 Date: 2024-02-15
+🕐 Time: 19:00
+⏱️ Duration: 4 hours
+🚪 Room: VIP Room 1
+👥 People: 6
 
-## Admin Dashboard Features
+💰 Total: £140
+✅ Deposit Paid: £42
+⚠️ Remaining: £98
 
-### List View
-- See all bookings in a table format
-- Filter by status, date, room, or customer name
-- Quick actions to approve/reject
-- View customer notes
+📍 Location: 123 High Street, London
+🗺️ Map: [link]
 
-### Calendar View
-- Visual grid showing all rooms and time slots
-- See booking conflicts at a glance
-- Color-coded by status:
-  - Yellow: Pending
-  - Blue: Approved
-  - Green: Confirmed
-  - Gray: Cancelled
-  - Red: Rejected
+❌ Cancel booking: [link]
 
-### Customer Database
-- View all customers with booking history
-- Track total visits per customer
-- Add notes for special requirements
-- See complete booking timeline
+See you soon! 🎵
+```
 
-## Important Notes
+## Testing Checklist
 
-### Security
-- Never share your API keys publicly
-- Keep your Stripe secret key secure
-- Use environment variables for production deployment
+Before going live:
 
-### Testing
-- Use Stripe test mode keys for testing
-- Twilio sandbox for WhatsApp testing
-- Test email delivery before going live
+✅ **WhatsApp Cloud API**
+- [ ] Access token configured
+- [ ] Phone number ID configured
+- [ ] Test message sent successfully
+- [ ] Customer receives confirmation
+- [ ] Admin receives new booking notification
 
-### Data Storage
-- All data is stored in `.storage/` directory
-- This directory is gitignored by default
-- Back up this directory regularly for data persistence
+✅ **Pricing**
+- [ ] Base pricing calculated correctly
+- [ ] Additional hours calculated correctly
+- [ ] Peak time multiplier working
+- [ ] Promo codes applying discounts
+- [ ] Admin override updates prices
 
-### Reminder Scheduler
-- Runs automatically every 15 minutes
-- Checks for upcoming bookings
-- Sends reminders at appropriate times
-- Logs all reminder activities to console
+✅ **Payments**
+- [ ] Stripe keys configured (use test mode first)
+- [ ] Payment link generated on approval
+- [ ] Deposit payment processed
+- [ ] Booking confirmed after payment
+
+✅ **Notifications**
+- [ ] WhatsApp messages sent
+- [ ] Email backup working
+- [ ] 24h reminders sent
+- [ ] 2h reminders sent
+- [ ] Cancellation notifications sent
 
 ## Troubleshooting
 
-### WhatsApp messages not sending
-- Verify Twilio credentials in Settings
-- Check that customer's number is in Twilio sandbox (for testing)
-- Ensure WhatsApp number format includes country code
+### WhatsApp Messages Not Sending
 
-### Emails not sending
-- Verify SMTP credentials
-- For Gmail, ensure App Password is used (not regular password)
-- Check spam folder
+**Check:**
+1. Access token is valid (not temporary token)
+2. Phone number ID is correct
+3. Phone numbers include country code (e.g., +44, not 0)
+4. Customer's number is verified in Meta Business (for testing)
+5. Check app logs for error messages
 
-### Payment link not working
-- Verify Stripe keys are correct
-- Ensure deposit amount is calculated correctly
-- Check Stripe dashboard for any errors
+### Pricing Calculation Issues
 
-### Reminders not being sent
-- Check server logs for scheduler errors
-- Verify booking times are in the future
-- Ensure customer contact info is correct
+**Check:**
+1. Settings → Pricing Model values are correct
+2. Peak hours are set if using peak pricing
+3. Promo codes are active and not expired
+4. Custom price override hasn't been set
 
-## Support
+### Admin Price Override Not Working
 
-For issues or questions, check:
-- Stripe documentation: https://stripe.com/docs
-- Twilio documentation: https://www.twilio.com/docs
-- Nodemailer guide: https://nodemailer.com/
+**Ensure:**
+1. Booking exists and hasn't been cancelled
+2. Custom price is a valid number
+3. Price is greater than 0
+4. You clicked "Update Price" button
 
-## Future Enhancements
+## Production Deployment
 
-Optional features you can add:
-- Google Calendar integration
-- Downloadable booking receipts
-- Customer loyalty program
-- Multi-language support
-- SMS notifications (using Twilio)
-- Push notifications
-- Advanced analytics dashboard
+When ready to go live:
+
+1. **WhatsApp:** Keep same access token (it's permanent)
+2. **Stripe:** Switch to live keys (`pk_live_...` and `sk_live_...`)
+3. **Testing:** Verify all features with real test bookings
+4. **Backup:** Regularly backup `.storage/` directory
+
+## Support Resources
+
+- **WhatsApp Cloud API Docs**: https://developers.facebook.com/docs/whatsapp/cloud-api
+- **Stripe Documentation**: https://stripe.com/docs
+- **Meta Business Help**: https://business.facebook.com/business/help
+
+## Key Differences from Previous Version
+
+| Feature | Old | New |
+|---------|-----|-----|
+| Messaging | Twilio | WhatsApp Cloud API |
+| Pricing | Per room per hour | Per person (base + additional) |
+| Currency | $ (USD) | £ (GBP) |
+| Price Override | Not available | Admin can override any booking |
+| Setup Complexity | Higher (Twilio account) | Lower (Meta Business only) |

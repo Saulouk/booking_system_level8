@@ -34,6 +34,8 @@ export const BookingSchema = z.object({
   customerId: z.string().optional(),
   reminderSent24h: z.boolean().default(false),
   reminderSent2h: z.boolean().default(false),
+  customPriceOverride: z.number().optional(),
+  adminNotes: z.string().optional(),
 });
 
 export const CreateBookingInputSchema = z.object({
@@ -78,9 +80,8 @@ export const SettingsSchema = z.object({
   offPeakDiscount: z.number().default(0),
   stripePublishableKey: z.string().optional(),
   stripeSecretKey: z.string().optional(),
-  twilioAccountSid: z.string().optional(),
-  twilioAuthToken: z.string().optional(),
-  twilioWhatsAppFrom: z.string().optional(),
+  whatsappAccessToken: z.string().optional(),
+  whatsappPhoneNumberId: z.string().optional(),
   smtpHost: z.string().optional(),
   smtpPort: z.number().optional(),
   smtpUser: z.string().optional(),
@@ -89,6 +90,11 @@ export const SettingsSchema = z.object({
   venueName: z.string().default("Karaoke Paradise"),
   venueAddress: z.string().optional(),
   venueLocationLink: z.string().optional(),
+  baseHours: z.number().default(3),
+  pricePerPersonBase: z.number().default(20),
+  pricePerPersonAdditional: z.number().default(5),
+  currency: z.string().default("GBP"),
+  currencySymbol: z.string().default("£"),
 });
 
 export const PromoCodeSchema = z.object({

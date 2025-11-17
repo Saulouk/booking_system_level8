@@ -1,4 +1,3 @@
-import twilio from "twilio";
 import nodemailer from "nodemailer";
 import { settingsKV } from "./storage";
 import type { Booking, Room } from "./types";
@@ -10,20 +9,40 @@ export async function sendWhatsAppMessage(
   try {
     const settings = await settingsKV.getItem("settings");
     if (
-      !settings?.twilioAccountSid ||
-      !settings?.twilioAuthToken ||
-      !settings?.twilioWhatsAppFrom
+      !settings?.whatsappAccessToken ||
+      !settings?.whatsappPhoneNumberId
     ) {
-      console.warn("Twilio not configured, skipping WhatsApp message");
+      console.warn("WhatsApp Cloud API not configured, skipping WhatsApp message");
       return false;
     }
 
-    const client = twilio(settings.twilioAccountSid, settings.twilioAuthToken);
-    await client.messages.create({
-      from: `whatsapp:${settings.twilioWhatsAppFrom}`,
-      to: `whatsapp:${to}`,
-      body: message,
-    });
+    // Clean phone number (remove + and spaces)
+    const cleanNumber = to.replace(/\+/g, "").replace(/\s/g, "");
+
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/${settings.whatsappPhoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${settings.whatsappAccessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: cleanNumber,
+          type: "text",
+          text: {
+            body: message,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("WhatsApp API error:", error);
+      return false;
+    }
 
     return true;
   } catch (error) {
@@ -115,6 +134,7 @@ export async function sendBookingConfirmation(
   const settings = await settingsKV.getItem("settings");
   if (!settings) return;
 
+  const currencySymbol = settings.currencySymbol || "£";
   const cancellationUrl = `${process.env.APP_URL || "http://localhost:5173"}/cancel/${booking.cancellationToken}`;
   
   const message = `
@@ -129,9 +149,9 @@ ${booking.fullName}, your booking is confirmed!
 🚪 Room: ${room.name}
 👥 People: ${booking.numberOfPeople}
 
-${booking.totalPrice ? `💰 Total: $${booking.totalPrice}` : ""}
-${booking.depositAmount ? `✅ Deposit Paid: $${booking.depositAmount}` : ""}
-${booking.remainingAmount ? `⚠️ Remaining: $${booking.remainingAmount}` : ""}
+${booking.totalPrice ? `💰 Total: ${currencySymbol}${booking.totalPrice}` : ""}
+${booking.depositAmount ? `✅ Deposit Paid: ${currencySymbol}${booking.depositAmount}` : ""}
+${booking.remainingAmount ? `⚠️ Remaining: ${currencySymbol}${booking.remainingAmount}` : ""}
 
 ${settings.venueAddress ? `📍 Location: ${settings.venueAddress}` : ""}
 ${settings.venueLocationLink ? `🗺️ Map: ${settings.venueLocationLink}` : ""}
@@ -151,9 +171,9 @@ See you soon! 🎵
       <li><strong>Duration:</strong> ${booking.hours} hour${booking.hours > 1 ? "s" : ""}</li>
       <li><strong>Room:</strong> ${room.name}</li>
       <li><strong>People:</strong> ${booking.numberOfPeople}</li>
-      ${booking.totalPrice ? `<li><strong>Total:</strong> $${booking.totalPrice}</li>` : ""}
-      ${booking.depositAmount ? `<li><strong>Deposit Paid:</strong> $${booking.depositAmount}</li>` : ""}
-      ${booking.remainingAmount ? `<li><strong>Remaining:</strong> $${booking.remainingAmount}</li>` : ""}
+      ${booking.totalPrice ? `<li><strong>Total:</strong> ${currencySymbol}${booking.totalPrice}</li>` : ""}
+      ${booking.depositAmount ? `<li><strong>Deposit Paid:</strong> ${currencySymbol}${booking.depositAmount}</li>` : ""}
+      ${booking.remainingAmount ? `<li><strong>Remaining:</strong> ${currencySymbol}${booking.remainingAmount}</li>` : ""}
     </ul>
     ${settings.venueAddress ? `<p><strong>Location:</strong> ${settings.venueAddress}</p>` : ""}
     ${settings.venueLocationLink ? `<p><a href="${settings.venueLocationLink}">View on Map</a></p>` : ""}
@@ -176,6 +196,7 @@ export async function sendReminder(
   const settings = await settingsKV.getItem("settings");
   if (!settings) return;
 
+  const currencySymbol = settings.currencySymbol || "£";
   const isEarly = hoursBeforeType === "24h";
   
   const message = isEarly
@@ -189,7 +210,7 @@ Your karaoke session is tomorrow:
 🚪 Room: ${room.name}
 ⏱️ Duration: ${booking.hours} hour${booking.hours > 1 ? "s" : ""}
 
-${booking.remainingAmount ? `⚠️ Balance Due: $${booking.remainingAmount}` : ""}
+${booking.remainingAmount ? `⚠️ Balance Due: ${currencySymbol}${booking.remainingAmount}` : ""}
 
 See you soon! 🎵
     `.trim()

@@ -24,13 +24,18 @@ const updateSettings = os
         peakPriceMultiplier: 1.5,
         offPeakDiscount: 0,
         venueName: "Karaoke Paradise",
+        baseHours: 3,
+        pricePerPersonBase: 20,
+        pricePerPersonAdditional: 5,
+        currency: "GBP",
+        currencySymbol: "£",
       };
     }
 
-    Object.assign(settings, input);
-    await settingsKV.setItem("settings", settings);
+    const updatedSettings = { ...settings, ...input };
+    await settingsKV.setItem("settings", updatedSettings);
 
-    return settings;
+    return updatedSettings;
   });
 
 const listPromoCodes = os.handler(async () => {

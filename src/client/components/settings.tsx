@@ -18,9 +18,8 @@ export function Settings() {
     peakPriceMultiplier: 1.5,
     stripePublishableKey: "",
     stripeSecretKey: "",
-    twilioAccountSid: "",
-    twilioAuthToken: "",
-    twilioWhatsAppFrom: "",
+    whatsappAccessToken: "",
+    whatsappPhoneNumberId: "",
     smtpHost: "",
     smtpPort: 587,
     smtpUser: "",
@@ -29,6 +28,11 @@ export function Settings() {
     venueName: "Karaoke Paradise",
     venueAddress: "",
     venueLocationLink: "",
+    baseHours: 3,
+    pricePerPersonBase: 20,
+    pricePerPersonAdditional: 5,
+    currency: "GBP",
+    currencySymbol: "£",
   });
 
   const [saving, setSaving] = useState(false);
@@ -44,9 +48,8 @@ export function Settings() {
         peakPriceMultiplier: settings.peakPriceMultiplier || 1.5,
         stripePublishableKey: settings.stripePublishableKey || "",
         stripeSecretKey: settings.stripeSecretKey || "",
-        twilioAccountSid: settings.twilioAccountSid || "",
-        twilioAuthToken: settings.twilioAuthToken || "",
-        twilioWhatsAppFrom: settings.twilioWhatsAppFrom || "",
+        whatsappAccessToken: settings.whatsappAccessToken || "",
+        whatsappPhoneNumberId: settings.whatsappPhoneNumberId || "",
         smtpHost: settings.smtpHost || "",
         smtpPort: settings.smtpPort || 587,
         smtpUser: settings.smtpUser || "",
@@ -55,6 +58,11 @@ export function Settings() {
         venueName: settings.venueName || "Karaoke Paradise",
         venueAddress: settings.venueAddress || "",
         venueLocationLink: settings.venueLocationLink || "",
+        baseHours: settings.baseHours || 3,
+        pricePerPersonBase: settings.pricePerPersonBase || 20,
+        pricePerPersonAdditional: settings.pricePerPersonAdditional || 5,
+        currency: settings.currency || "GBP",
+        currencySymbol: settings.currencySymbol || "£",
       });
     }
   }, [settings]);
@@ -194,7 +202,89 @@ export function Settings() {
           </div>
 
           <div className="border-b pb-6">
-            <h3 className="text-lg font-semibold mb-4">Pricing</h3>
+            <h3 className="text-lg font-semibold mb-4">Pricing Model</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Per-person pricing: Base price for first {formData.baseHours} hours, then additional per hour
+            </p>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Base Hours
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.baseHours}
+                  onChange={(e) =>
+                    setFormData({ ...formData, baseHours: parseInt(e.target.value) })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Price Per Person (Base)
+                </label>
+                <div className="flex gap-2">
+                  <span className="flex items-center px-3 py-2 bg-gray-100 border border-gray-300 rounded-l-md">
+                    {formData.currencySymbol}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.pricePerPersonBase}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        pricePerPersonBase: parseFloat(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-r-md"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Additional Per Hour
+                </label>
+                <div className="flex gap-2">
+                  <span className="flex items-center px-3 py-2 bg-gray-100 border border-gray-300 rounded-l-md">
+                    {formData.currencySymbol}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.pricePerPersonAdditional}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        pricePerPersonAdditional: parseFloat(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-r-md"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+              <p className="text-sm text-blue-800">
+                <strong>Example:</strong> With current settings, a booking for 4 people for 5 hours would cost:
+                <br />
+                Base ({formData.baseHours} hours): 4 × {formData.currencySymbol}{formData.pricePerPersonBase} = {formData.currencySymbol}{4 * formData.pricePerPersonBase}
+                <br />
+                Additional (2 hours): 4 × {formData.currencySymbol}{formData.pricePerPersonAdditional} × 2 = {formData.currencySymbol}{4 * formData.pricePerPersonAdditional * 2}
+                <br />
+                <strong>Total: {formData.currencySymbol}{(4 * formData.pricePerPersonBase) + (4 * formData.pricePerPersonAdditional * 2)}</strong>
+              </p>
+            </div>
+          </div>
+
+          <div className="border-b pb-6">
+            <h3 className="text-lg font-semibold mb-4">Peak Time Pricing</h3>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -213,6 +303,9 @@ export function Settings() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                1.5 = 50% increase during peak hours
+              </p>
             </div>
 
             <div>
@@ -278,52 +371,42 @@ export function Settings() {
           </div>
 
           <div className="border-b pb-6">
-            <h3 className="text-lg font-semibold mb-4">Twilio Settings (WhatsApp)</h3>
+            <h3 className="text-lg font-semibold mb-4">WhatsApp Cloud API</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Get your API credentials from <a href="https://developers.facebook.com/apps" target="_blank" className="text-purple-600 hover:underline">Meta Business</a>
+            </p>
 
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Account SID
-                </label>
-                <input
-                  type="text"
-                  value={formData.twilioAccountSid}
-                  onChange={(e) =>
-                    setFormData({ ...formData, twilioAccountSid: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Auth Token
+                  Access Token
                 </label>
                 <input
                   type="password"
-                  value={formData.twilioAuthToken}
+                  value={formData.whatsappAccessToken}
                   onChange={(e) =>
-                    setFormData({ ...formData, twilioAuthToken: e.target.value })
+                    setFormData({ ...formData, whatsappAccessToken: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="EAAxxxxxxxxx..."
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  WhatsApp From Number
+                  Phone Number ID
                 </label>
                 <input
-                  type="tel"
-                  value={formData.twilioWhatsAppFrom}
+                  type="text"
+                  value={formData.whatsappPhoneNumberId}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      twilioWhatsAppFrom: e.target.value,
+                      whatsappPhoneNumberId: e.target.value,
                     })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="+14155238886"
+                  placeholder="123456789012345"
                 />
               </div>
             </div>

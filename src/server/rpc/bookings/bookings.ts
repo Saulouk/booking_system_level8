@@ -50,7 +50,7 @@ const createBooking = os
       }
 
       const pricing = await calculatePrice(
-        availableRoom.hourlyRate,
+        input.numberOfPeople,
         input.hours,
         input.startTime,
         input.promoCode
@@ -264,6 +264,8 @@ const updateBooking = os
       numberOfPeople: z.number().optional(),
       roomId: z.string().optional(),
       notes: z.string().optional(),
+      customPriceOverride: z.number().optional(),
+      adminNotes: z.string().optional(),
     })
   )
   .handler(async ({ input }) => {
@@ -276,6 +278,25 @@ const updateBooking = os
       if (input.numberOfPeople) booking.numberOfPeople = input.numberOfPeople;
       if (input.roomId) booking.roomId = input.roomId;
       if (input.notes !== undefined) booking.notes = input.notes;
+      if (input.adminNotes !== undefined) booking.adminNotes = input.adminNotes;
+      
+      // Handle custom price override
+      if (input.customPriceOverride !== undefined) {
+        booking.customPriceOverride = input.customPriceOverride;
+        
+        // Recalculate pricing with override
+        const pricing = await calculatePrice(
+          booking.numberOfPeople,
+          booking.hours,
+          booking.startTime,
+          undefined,
+          input.customPriceOverride
+        );
+        
+        booking.totalPrice = pricing.finalPrice;
+        booking.depositAmount = pricing.depositAmount;
+        booking.remainingAmount = pricing.remainingAmount;
+      }
 
       booking.updatedAt = new Date().toISOString();
       await bookingsKV.setItem(booking.id, booking);
@@ -287,21 +308,14 @@ const calculateEstimate = os
   .input(
     z.object({
       hours: z.number(),
+      numberOfPeople: z.number(),
       startTime: z.string(),
       promoCode: z.string().optional(),
     })
   )
   .handler(async ({ input }) => {
-      const rooms = await roomsKV.getAllItems();
-      if (!rooms || rooms.length === 0) {
-        throw new Error("No rooms configured");
-      }
-
-      const avgRate =
-        rooms.reduce((sum, r) => sum + r.hourlyRate, 0) / rooms.length;
-
       return await calculatePrice(
-        avgRate,
+        input.numberOfPeople,
         input.hours,
         input.startTime,
         input.promoCode

@@ -4,6 +4,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 
 export function AdminDashboard() {
   const [view, setView] = useState<"list" | "calendar">("list");
+  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [customPrice, setCustomPrice] = useState("");
   const [filters, setFilters] = useState({
     status: "",
     date: "",
@@ -45,6 +47,22 @@ export function AdminDashboard() {
     if (confirm("Are you sure you want to reject this booking?")) {
       await rejectBooking.mutateAsync({ id });
       refetch();
+    }
+  };
+
+  const handlePriceOverride = async () => {
+    if (!selectedBooking || !customPrice) return;
+    
+    try {
+      await updateBooking.mutateAsync({
+        id: selectedBooking.id,
+        customPriceOverride: parseFloat(customPrice),
+      });
+      setSelectedBooking(null);
+      setCustomPrice("");
+      refetch();
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -185,6 +203,9 @@ export function AdminDashboard() {
                       People
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Price
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Status
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -218,6 +239,14 @@ export function AdminDashboard() {
                         {booking.numberOfPeople}
                       </td>
                       <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">
+                          £{booking.totalPrice || 0}
+                          {booking.customPriceOverride && (
+                            <span className="ml-1 text-xs text-purple-600">(Custom)</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
                             booking.status
@@ -227,7 +256,7 @@ export function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           {booking.status === "pending" && (
                             <>
                               <button
@@ -244,6 +273,15 @@ export function AdminDashboard() {
                               </button>
                             </>
                           )}
+                          <button
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setCustomPrice(booking.totalPrice?.toString() || "");
+                            }}
+                            className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                          >
+                            Override Price
+                          </button>
                           {booking.notes && (
                             <button
                               onClick={() => alert(booking.notes)}
@@ -270,6 +308,57 @@ export function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4">Override Price</h3>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Customer:</strong> {selectedBooking.fullName}
+              </p>
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>Date:</strong> {selectedBooking.date} at {selectedBooking.startTime}
+              </p>
+              <p className="text-sm text-gray-600 mb-2">
+                <strong>People:</strong> {selectedBooking.numberOfPeople} | <strong>Hours:</strong> {selectedBooking.hours}
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                <strong>Current Price:</strong> £{selectedBooking.totalPrice || 0}
+              </p>
+              
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Custom Price (£)
+              </label>
+              <input
+                type="number"
+                value={customPrice}
+                onChange={(e) => setCustomPrice(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Enter custom price"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setSelectedBooking(null);
+                  setCustomPrice("");
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePriceOverride}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Update Price
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
