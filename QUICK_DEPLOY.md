@@ -68,8 +68,7 @@ cat > ecosystem.config.cjs << 'EOF'
 module.exports = {
   apps: [{
     name: 'karaoke-booking',
-    script: 'pnpm',
-    args: 'run preview',
+    script: './server.js',
     instances: 1,
     autorestart: true,
     watch: false,
