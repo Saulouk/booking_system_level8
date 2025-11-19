@@ -127,8 +127,9 @@ const listBookings = os
         bookings = bookings.filter((b) => b.roomId === input.roomId);
       }
       if (input.customerName) {
+        const searchName = input.customerName.toLowerCase();
         bookings = bookings.filter((b) =>
-          b.fullName.toLowerCase().includes(input.customerName!.toLowerCase())
+          b.fullName.toLowerCase().includes(searchName)
         );
       }
 
@@ -162,7 +163,7 @@ const approveBooking = os
         line_items: [
           {
             price_data: {
-              currency: "usd",
+              currency: "gbp",
               product_data: {
                 name: `Karaoke Booking Deposit - ${booking.date}`,
                 description: `Room booking for ${booking.hours} hour(s) on ${booking.date} at ${booking.startTime}`,
