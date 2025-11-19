@@ -119,26 +119,61 @@ This creates optimized production files in the `dist` directory.
 sudo npm install -g pm2
 ```
 
-### 5.2 Create Production Start Script
-
-Create `start.sh` in your project root:
+### 5.2 Create Production Environment File
 
 ```bash
-cat > start.sh << 'EOF'
-#!/bin/bash
-export NODE_ENV=production
-export PORT=3000
-export APP_URL=http://your-domain.com
-node dist/server/index.js
-EOF
+nano .env.production
+```
 
-chmod +x start.sh
+Add your configuration:
+
+```env
+NODE_ENV=production
+PORT=3000
+APP_URL=https://your-domain.com
 ```
 
 ### 5.3 Start Application with PM2
 
+Since this is a Vite-based application, we'll use Vite's preview mode for production:
+
 ```bash
-pm2 start start.sh --name karaoke-booking
+# Option 1: Using vite preview (recommended for this setup)
+pm2 start "pnpm run preview" --name karaoke-booking
+
+# Option 2: If you prefer direct node execution, use ecosystem file (see below)
+```
+
+### 5.4 Alternative: Using PM2 Ecosystem File (Better Control)
+
+Create `ecosystem.config.cjs` in your project root:
+
+```bash
+cat > ecosystem.config.cjs << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'karaoke-booking',
+    script: 'pnpm',
+    args: 'run preview',
+    cwd: '/home/your-username/karaoke-booking',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000,
+      APP_URL: 'https://your-domain.com'
+    }
+  }]
+};
+EOF
+```
+
+Then start with:
+
+```bash
+pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup  # Follow the instructions printed
 ```
@@ -247,54 +282,60 @@ sudo ufw status
 
 ## Step 9: Environment Configuration
 
-### 9.1 Create Environment File
+### 9.1 Create or Update Environment File
 
 ```bash
-nano ~/.karaoke-env
+nano .env.production
 ```
 
-Add your sensitive configuration:
+Add your production configuration:
 
 ```env
+NODE_ENV=production
+PORT=3000
 APP_URL=https://your-domain.com
-STRIPE_SECRET_KEY=sk_live_...
-WHATSAPP_ACCESS_TOKEN=EAAxxxxxxxxx...
-WHATSAPP_PHONE_NUMBER_ID=123456789...
-SMTP_PASSWORD=your-smtp-password
+
+# These will be loaded by the application
+# No need for export since Vite handles it
 ```
 
-### 9.2 Update Start Script to Use Env File
+### 9.2 Update Ecosystem Config (if using)
+
+Edit `ecosystem.config.cjs`:
 
 ```bash
-nano start.sh
+nano ecosystem.config.cjs
 ```
 
-Update to:
+Update the env section with your sensitive data:
 
-```bash
-#!/bin/bash
-export NODE_ENV=production
-export PORT=3000
-
-# Load environment variables
-if [ -f ~/.karaoke-env ]; then
-    export $(cat ~/.karaoke-env | xargs)
-fi
-
-node dist/server/index.js
+```javascript
+module.exports = {
+  apps: [{
+    name: 'karaoke-booking',
+    script: 'pnpm',
+    args: 'run preview',
+    cwd: '/home/your-username/karaoke-booking',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000,
+      APP_URL: 'https://your-domain.com'
+    }
+  }]
+};
 ```
 
-### 9.3 Secure the Environment File
-
-```bash
-chmod 600 ~/.karaoke-env
-```
-
-### 9.4 Restart Application
+### 9.3 Restart Application
 
 ```bash
 pm2 restart karaoke-booking
 ```
+
+**Note:** API keys (Stripe, WhatsApp, SMTP) are configured through the application's Settings page after deployment, not via environment variables.
 
 ## Step 10: Data Persistence
 
